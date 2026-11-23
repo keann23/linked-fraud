@@ -95,6 +95,72 @@ def compare(test: pd.DataFrame, scores: pd.DataFrame) -> tuple[pd.DataFrame, pd.
     return r, m
 
 
+def coverage(test: pd.DataFrame, scores: pd.DataFrame) -> pd.DataFrame:
+    """Share of each fraud segment the baseline model already flags (mean over seeds)."""
+    y = test.isFraud.to_numpy().astype(bool)
+    segments = {
+        "All test fraud": y,
+        "Fraud with a known-fraud neighbor": y & (test.nbr_fraud_uids.fillna(0).to_numpy() >= 1),
+        "Fraud inside a ring": y & ring_flag(test),
+    }
+    rows = []
+    for seed in SEEDS:
+        flag = model.flag_top(scores[f"baseline_s{seed}"].to_numpy())
+        for name, seg in segments.items():
+            rows.append({"segment": name, "seed": seed, "fraud": int(seg.sum()),
+                         "caught": int((seg & flag).sum()), "share": (seg & flag).sum() / seg.sum()})
+    out = pd.DataFrame(rows).groupby("segment", sort=False).agg(
+        fraud=("fraud", "first"), caught_mean=("caught", "mean"), share=("share", "mean"),
+        share_min=("share", "min"), share_max=("share", "max"))
+    return out
+
+
+def plot_headline(r: pd.DataFrame, cov: pd.DataFrame):
+    import matplotlib.pyplot as plt
+    import viz
+
+    viz.use_style()
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 5.2), gridspec_kw={"width_ratios": [1.15, 1], "wspace": 0.6})
+
+    # left: recall at the same budget
+    names = list(r.index)[::-1]
+    rec = r[("recall", "mean")].reindex(names)
+    sd = r[("recall", "std")].reindex(names).fillna(0)
+    colors = [viz.BLUE if n == "Model + network features" else viz.MUTED for n in names]
+    a1.barh(names, rec, color=colors, height=0.6, xerr=sd, error_kw={"ecolor": viz.TEXT_2, "lw": 1.2, "capsize": 3})
+    for i, v in enumerate(rec):
+        a1.text(v + sd.iloc[i] + 0.012, i, f"{v:.1%}", va="center", fontsize=12, color=viz.TEXT)
+    a1.set_xlim(0, 0.55)
+    a1.xaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
+    a1.grid(axis="y", visible=False)
+    a1.grid(axis="x", visible=True)
+    a1.set_title("Share of test fraud caught, same 2% review budget", fontsize=13)
+
+    # right: what the baseline already catches
+    segs = list(cov.index)[::-1]
+    sh = cov.share.reindex(segs)
+    lo = (sh - cov.share_min.reindex(segs)).to_numpy()
+    hi = (cov.share_max.reindex(segs) - sh).to_numpy()
+    colors = [viz.MUTED if s == "All test fraud" else viz.FRAUD for s in segs]
+    a2.barh(segs, sh, color=colors, height=0.6, xerr=[lo, hi], error_kw={"ecolor": viz.TEXT_2, "lw": 1.2, "capsize": 3})
+    for i, s in enumerate(segs):
+        a2.text(sh[s] + hi[i] + 0.03, i, f"{sh[s]:.0%}  (of {cov.fraud[s]:,})", va="center", fontsize=12, color=viz.TEXT)
+    a2.set_xlim(0, 1.25)
+    a2.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
+    a2.xaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
+    a2.grid(axis="y", visible=False)
+    a2.grid(axis="x", visible=True)
+    a2.set_title("Share the baseline model already catches", fontsize=13)
+
+    gain = r.loc["Model + network features", ("recall", "mean")] - r.loc["Baseline model", ("recall", "mean")]
+    viz.headline(fig, "The transaction model already catches most ring fraud",
+                 f"Adding network features moved recall by {gain * 100:+.1f} points, inside the seed-to-seed noise.")
+    viz.source_note(fig, "Review budget: top 2% of test transactions (3,520 of 175,998, last 2 months). "
+                         "Mean of 3 model seeds; whiskers show the spread.\n"
+                         "Data: IEEE-CIS Fraud Detection (Vesta), 590,540 transactions")
+    return fig
+
+
 if __name__ == "__main__":
     df = load_frame()
     train, test = model.split(df)
