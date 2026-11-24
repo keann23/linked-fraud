@@ -103,13 +103,6 @@ def fraud_share_distribution(con, col: str) -> pd.DataFrame:
     """).df()
 
 
-if __name__ == "__main__":
-    build_identity(force=True)
-    con = connect()
-    pd.set_option("display.width", 250)
-    print(compare_groupings(con).T.to_string())
-
-
 def plot_purity(con, stats: pd.DataFrame):
     """Two panels: among multi-transaction groups that contain any fraud,
     what share of each group's transactions is fraud?"""
@@ -148,3 +141,10 @@ def plot_purity(con, stats: pd.DataFrame):
     viz.source_note(fig)
     fig.tight_layout(w_pad=3)
     return fig
+
+
+if __name__ == "__main__":
+    build_identity(force=True)
+    con = connect()
+    pd.set_option("display.width", 250)
+    print(compare_groupings(con).T.to_string())

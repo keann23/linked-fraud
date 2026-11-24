@@ -42,6 +42,7 @@ PARAMS = dict(
 
 def load_frame() -> pd.DataFrame:
     con = duckdb.connect()
+    con.execute("SET enable_progress_bar = false")
     df = con.sql(f"""
         SELECT b.*,
                CAST(FLOOR((b.TransactionDT % 86400) / 3600) AS INTEGER) AS hour,
@@ -195,6 +196,16 @@ def shap_importance(model: lgb.Booster, X: pd.DataFrame, n: int = 20000) -> pd.S
     if isinstance(sv, list):
         sv = sv[1]
     return pd.Series(np.abs(sv).mean(0), index=X.columns).sort_values(ascending=False)
+
+
+def shap_title(imp: pd.Series) -> tuple[str, str]:
+    vel = imp.index.isin(VELOCITY_COLS)
+    share = imp[vel].sum() / imp.sum()
+    best = imp[vel].index[0]
+    rank = list(imp.index).index(best) + 1
+    return ("The model leans on amount, card and email signals",
+            f"Top 15 of {len(imp)} features. The SQL velocity features add only {share:.1%} of total impact; "
+            f"{READABLE.get(best, best).replace('card1 txns, last 7 days', 'card1 activity in the last 7 days')} ranks highest (#{rank}).")
 
 
 def plot_shap(imp: pd.Series, title: str, subtitle: str, top: int = 15):

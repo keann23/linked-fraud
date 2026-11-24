@@ -183,7 +183,8 @@ def plot_size_vs_fraud(c: pd.DataFrame):
     import viz
 
     viz.use_style()
-    d = c[(c.n_uids >= 2) & (c.train_txns >= 3)].copy()
+    # every ring, plus other groups with enough training history to have a stable rate
+    d = c[((c.n_uids >= 2) & (c.train_txns >= 3)) | is_ring(c)].copy()
     ring = is_ring(d)
     rng = np.random.default_rng(SEED)
     x = d.n_uids * np.exp(rng.uniform(-0.12, 0.12, len(d)))
