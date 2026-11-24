@@ -104,6 +104,5 @@ Stack: Python, DuckDB (SQL feature engineering), LightGBM, SHAP, networkx (Louva
 ## About
 
 **Kean Zhu**, MS Business Analytics, Boston University.
-[LinkedIn](LINKEDIN_URL) · [GitHub](GITHUB_URL)
 
 Data: [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection), provided by Vesta Corporation. The data is not included in this repository.
