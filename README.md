@@ -1,4 +1,4 @@
-# Fraud Ring Hunter
+# Linked Fraud
 
 **Fraud rings are real, but a strong transaction model already catches 89% of their fraud. Adding network features moved recall by just +0.2 points, inside the noise.**
 
@@ -90,12 +90,12 @@ bash scripts/setup_env.sh
 .venv/bin/python src/pipeline.py
 ```
 
-5. Open the story notebook, [`notebooks/fraud_ring_hunter.ipynb`](notebooks/fraud_ring_hunter.ipynb).
+5. Open the story notebook, [`notebooks/linked_fraud.ipynb`](notebooks/linked_fraud.ipynb).
 
 ```
 sql/          DuckDB queries: load, identities, velocity features, edges, as-of network features
 src/          identity, features, model, graph, compare, patterns, hero, viz, pipeline
-notebooks/    fraud_ring_hunter.ipynb (the story) and 00_scratch/ (one working notebook per phase)
+notebooks/    linked_fraud.ipynb (the story) and 00_scratch/ (one working notebook per phase)
 figures/      the charts above
 ```
 
